@@ -175,7 +175,7 @@ jobs:
           cd ..
           echo "2.0" > ../debian-binary
           cd ..
-          fakeroot tar -czf hysterya_${{ matrix.version }}_${{ matrix.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
+          fakeroot tar -czf hysteria_${{ matrix.version }}_${{ matrix.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
 
       - name: Upload artifacts
         if: steps.download.outputs.found == 'true'
