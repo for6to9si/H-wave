@@ -38,7 +38,7 @@ jobs:
           else
             latest=$(curl -s "https://api.github.com/repos/apernet/hysteria/releases/latest" \
               | jq -r 'select(.prerelease == false) | .tag_name' \
-              | sed 's/^v//')
+              | sed 's#^app/v##' )
             versions_json=$(echo "[\"$latest\"]")
           fi
 
@@ -96,7 +96,7 @@ jobs:
           mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/var/log/hysteria
           mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL
           
-          cp hysteria-${{ matrix.arch }} hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/sbin/hysteria
+          cp hysteria-${{ matrix.arch }}-${{ matrix.version }} hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/sbin/hysteria
           
           cp ./etc/init.d/S96hysteria hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
           chmod +x hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
