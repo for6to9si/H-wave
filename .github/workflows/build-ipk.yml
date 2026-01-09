@@ -1,0 +1,238 @@
+name: Build hysteria IPK packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      copy:
+        description: 'Build all releases'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  prepare-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.set-versions.outputs.versions }}
+    steps:
+      - name: Determine versions
+        id: set-versions
+        run: |
+          if [ "${{ github.event.inputs.copy }}" = "true" ]; then
+            versions=$(curl -s "https://api.github.com/repos/apernet/hysteria/releases?per_page=100" \
+              | jq -r '.[] | select(.prerelease == false) | .tag_name' \
+              | grep '^v[0-9]\+' \
+              | sed 's/^v//' \
+              | awk -F. '($2 == 2 && $2 >= 6 && $3 >= 5)' \
+              | sort -V)
+
+            versions_json=$(echo "$versions" | jq -R . | jq -s -c .)
+          else
+            latest=$(curl -s "https://api.github.com/repos/apernet/hysteria/releases/latest" \
+              | jq -r 'select(.prerelease == false) | .tag_name' \
+              | sed 's/^v//')
+            versions_json=$(echo "[\"$latest\"]")
+          fi
+
+          echo "Building versions: $versions_json"
+          echo "versions=$versions_json" >> $GITHUB_OUTPUT
+
+
+  build-ipk:
+    needs: prepare-versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [arm64, mipsle]
+        version: ${{ fromJson(needs.prepare-versions.outputs.versions) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tar gzip jq fakeroot
+
+      - name: Download Hysteria
+        id: download
+        run: |
+          url="https://github.com/apernet/hysteria/releases/download/app/v${{ matrix.version }}/hysteria-linux-${{ matrix.arch }}"
+          echo "Trying to download $url"
+
+          if curl --head --silent --fail "$url" > /dev/null; then
+            wget -q "$url"
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "No release found for version=${{ matrix.version }}, arch=${{ matrix.arch }}"
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: Create IPK package structure
+        if: steps.download.outputs.found == 'true'
+        run: |
+          if [ ! -f "hysteria-linux-${{ matrix.arch }}" ]; then
+            echo "Program not found, skipping IPK build for ${{ matrix.version }} ${{ matrix.arch }}"
+            exit 0
+          fi
+
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/sbin
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/etc/ndm/netfilter.d
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/etc/init.d
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/etc/hysteria
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/etc/hwave
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/var/log/hwave
+          mkdir -p hysteria-linux-${{ matrix.arch }}/opt/var/log/hysteria
+          mkdir -p hysteria-linux-${{ matrix.arch }}/CONTROL
+          
+          cp hysteria-linux-${{ matrix.arch }} hysteria-linux-${{ matrix.arch }}/opt/sbin/hysteria
+          
+          cp ./etc/init.d/S96hysteria hysteria-linux-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
+          chmod +x hysteria-linux-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
+          
+          # Маппинг arch → Architecture
+          case "${{ matrix.arch }}" in
+            arm64) arch_pkg="aarch64-3.10" ;;
+            mipsle) arch_pkg="mipsel-3.4" ;;
+            *) arch_pkg="${{ matrix.arch }}" ;; # fallback
+          esac
+          
+          cat > hysteria-linux-${{ matrix.arch }}/CONTROL/control <<EOF
+          Package: hysteria-tg-installer
+          Depends: libc,libssp,librt,libpthread,libpthread,jq,iptables,ca-certificates
+          Version: ${{ matrix.version }}
+          Architecture: $arch_pkg
+          Section: net
+          URL: https://v2.hysteria.network
+          Description: A minimalistic tool to automate Hysteria setup on Keenetic router systems..
+          License: GPL-3.0 license
+          Maintainer: for6to9si <for6to9si@gmail.com>
+          EOF
+          
+          cp ./etc/ndm/netfilter.d/002-hwave.sh hysteria-linux-${{ matrix.arch }}/opt/etc/ndm/netfilter.d/
+          chmod +x hysteria-linux-${{ matrix.arch }}/opt/etc/ndm/netfilter.d/002-hwave.sh
+          cp ./etc/hwave/hwave-conf.json hysteria-linux-${{ matrix.arch }}/opt/etc/hwave/hwave-conf.json
+
+      - name: Add conffiles
+        run: |
+          cat > hysteria-linux-${{ matrix.arch }}/CONTROL/conffiles <<'EOF'
+          /opt/etc/hwave/hwave-conf.json
+          EOF
+
+      - name: Add postinst script, add policy Hwave
+        if: steps.download.outputs.found == 'true'
+        run: |
+          cat > hysteria-linux-${{ matrix.arch }}/CONTROL/postinst <<'EOF'
+          #!/bin/sh
+          case "$1" in
+           configure)
+               ndmc -c 'ip policy Hwave'
+               ndmc -c 'ip policy Hwave description Hwave'
+               ndmc -c 'ip policy Hwave permit global ISP'
+               ndmc -c 'system configuration save'
+           ;;
+          esac
+          exit 0
+          EOF
+          chmod 755 hysteria-linux-${{ matrix.arch }}/CONTROL/postinst
+
+      - name: Add postrm script
+        if: steps.download.outputs.found == 'true'
+        run: |
+          cat > hysteria-linux-${{ matrix.arch }}/CONTROL/postrm <<'EOF'
+          #!/bin/sh
+          case "$1" in
+           remove)
+               ndmc -c 'ip no policy Hwave'
+               ndmc -c 'system configuration save'
+           ;;
+          esac
+          exit 0
+          EOF
+          chmod 755 hysteria-linux-${{ matrix.arch }}/CONTROL/postrm
+
+      - name: Package IPK
+        if: steps.download.outputs.found == 'true'
+        run: |
+          cd hysteria-linux-${{ matrix.arch }}
+          fakeroot tar -czf ../data.tar.gz ./opt/sbin ./opt/etc ./opt/var/log/hwave ./opt/var/log/hysteria
+          cd ./CONTROL
+          fakeroot tar -czf ../../control.tar.gz *
+          cd ..
+          echo "2.0" > ../debian-binary
+          cd ..
+          fakeroot tar -czf hysterya_${{ matrix.version }}_${{ matrix.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
+
+      - name: Upload artifacts
+        if: steps.download.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hysteria-linux-${{ matrix.arch }}
+          path: ./*.ipk
+          if-no-files-found: error
+
+  deploy-repository:
+    runs-on: ubuntu-latest
+    needs: [build-ipk]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate changelog
+        run: |
+          # Найдём предыдущий тег по дате создания
+          PREV_TAG=$(git tag --sort=creatordate | tail -n 1 | head -n 1 || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Logging all history."
+            git log --pretty=format:'- [%h](https://github.com/${{ github.repository }}/commit/%H): %s' > changelog.txt
+          else
+            echo "Generating changelog from $PREV_TAG to HEAD"
+            git log "$PREV_TAG"..HEAD --pretty=format:'- [%h](https://github.com/${{ github.repository }}/commit/%H): %s' > changelog.txt
+          fi
+          
+          #echo "Copied build from XTLS/Hysteria" > changelog.txt
+
+          echo "Changelog:"
+          cat changelog.txt
+
+      - name: Create releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Группируем артефакты по версии
+          for ver in $(ls artifacts/*/hysteria_*.ipk | sed -E 's/.*hysteria_([0-9.]+)_.*/\1/' | sort -u); do
+            tag="v$ver"
+            files=$(ls artifacts/*/hysteria_${ver}_*.ipk)
+
+            echo "Creating release $tag with files: $files"
+
+            if [ "${{ github.event.inputs.copy }}" = "true" ]; then
+              gh release create "$tag" $files \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "Release $tag (copied)" \
+                --notes-file changelog.txt || echo "Release $tag already exists"
+            else
+              gh release create "$tag" $files \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "Release $tag" \
+                --notes-file changelog.txt || echo "Release $tag already exists"
+            fi
+          done
+

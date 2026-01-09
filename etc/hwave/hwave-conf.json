@@ -1,0 +1,42 @@
+{
+  "client":
+  {
+    "name": "hysteria",
+    "path_config": "/opt/etc/hysteria/configs",
+    "lockFile": "/opt/tmp/hysteria-hwave.lock"
+  },
+  "app":
+  {
+    "name": "hwave",
+    "log": "/opt/var/log/hwave/hwave.log"
+  },
+  "network":
+  {
+    "table_id": "224",
+    "table_mark_hex": "0x4631",
+    "connection_policy": "hwave",
+    "chain_name": "hwave",
+    "port_redirect": "60018",
+    "port_tproxy": "60019",
+    "port_forwarding_list":
+    [
+      80,
+      443,
+      8080
+    ],
+    "port_forwarding_range":[
+      "50000:50030",
+      "1000:1002"
+    ],
+    "IPv6": true,
+    "IPv6_exclusions":[
+      "2a01:7e00::/29", //IP адреса ваших корпоративных серверов
+      "2001:19f0::/32"
+    ],
+    "IPv4_exclusions":[
+      "104.131.0.0/16", //IP адреса ваших корпоративных серверов
+      "143.42.0.0/16",
+      "159.203.0.0/16"
+    ]
+  }
+}
