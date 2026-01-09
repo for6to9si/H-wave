@@ -7,4 +7,4 @@
 
 # $type is `iptables` or `ip6tables`
 # $table is `nat` or `mangle`
-/opt/etc/init.d/S96hysteria2 firewall_"$type"_"$table"
+/opt/etc/init.d/S96hysteria firewall_"$type"_"$table"

@@ -12,8 +12,8 @@
     },
     "bandwidth":
     {
-        "up": "300 mbps",
-        "down": "300 mbps"
+        "up": "10 mbps",
+        "down": "10 mbps"
     },
     "fastOpen": true,
     "lazy": true,
