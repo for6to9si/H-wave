@@ -96,7 +96,7 @@ jobs:
           mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/var/log/hysteria
           mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL
           
-          cp hysteria-${{ matrix.arch }}-${{ matrix.version }} hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/sbin/hysteria
+          cp hysteria-${{ matrix.arch }}-${{ matrix.version }} hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/sbin/hysteria
           
           cp ./etc/init.d/S96hysteria hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
           chmod +x hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
