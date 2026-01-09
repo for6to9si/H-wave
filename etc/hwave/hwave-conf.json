@@ -2,7 +2,7 @@
   "client":
   {
     "name": "hysteria",
-    "path_config": "/opt/etc/hysteria/configs",
+    "path_config": "/opt/etc/hysteria/config.json",
     "lockFile": "/opt/tmp/hysteria-hwave.lock"
   },
   "app":

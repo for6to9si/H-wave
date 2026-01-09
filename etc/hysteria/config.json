@@ -1,0 +1,29 @@
+{
+    "server": "95.173.130.42:443",
+    "tls":
+    {
+        "sni": "mydomen.su",
+        "insecure": false
+    },
+    "auth": "myhysteriapassword",
+    "transport":
+    {
+        "type": "udp"
+    },
+    "bandwidth":
+    {
+        "up": "300 mbps",
+        "down": "300 mbps"
+    },
+    "fastOpen": true,
+    "lazy": true,
+    "tcpRedirect":
+    {
+        "listen": 60018
+    },
+    "udpTProxy":
+    {
+        "listen": 60019,
+        "timeout": "20s"
+    }
+}
