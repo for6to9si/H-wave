@@ -157,7 +157,7 @@ start_hysteria() {
     # Записываем информацию в лог и запускаем hysteria
     {
         echo -e "\n=== $(date) === hysteria client info ==="
-        hysteria client -c "$(echo "$js_SETTING" | jq -r '.client.path_config' // "/opt/etc/hysteria/config.json")"
+        hysteria client -c "$(echo "$js_SETTING" | jq -r '.client.path_config // "/opt/etc/hysteria/config.json"')"
     } >> "${LOG_FILE}" 2>&1 &
     HYSTERIA_PID=$!
     # hysteria
