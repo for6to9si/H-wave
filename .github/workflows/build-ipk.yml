@@ -69,7 +69,7 @@ jobs:
           echo "Trying to download $url"
 
           if curl --head --silent --fail "$url" > /dev/null; then
-            wget -q "$url"
+            wget -q "$url" -o hysteria-${{ matrix.arch }}
             echo "found=true" >> $GITHUB_OUTPUT
           else
             echo "No release found for version=${{ matrix.version }}, arch=${{ matrix.arch }}"
@@ -80,7 +80,7 @@ jobs:
       - name: Create IPK package structure
         if: steps.download.outputs.found == 'true'
         run: |
-          if [ ! -f "hysteria-linux-${{ matrix.arch }}" ]; then
+          if [ ! -f "hysteria-${{ matrix.arch }}" ]; then
             echo "Program not found, skipping IPK build for ${{ matrix.version }} ${{ matrix.arch }}"
             exit 0
           fi
@@ -94,7 +94,7 @@ jobs:
           mkdir -p hysteria-linux-${{ matrix.arch }}/opt/var/log/hysteria
           mkdir -p hysteria-linux-${{ matrix.arch }}/CONTROL
           
-          cp hysteria-linux-${{ matrix.arch }} hysteria-linux-${{ matrix.arch }}/opt/sbin/hysteria
+          cp hysteria-${{ matrix.arch }} hysteria-linux-${{ matrix.arch }}/opt/sbin/hysteria
           
           cp ./etc/init.d/S96hysteria hysteria-linux-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
           chmod +x hysteria-linux-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
