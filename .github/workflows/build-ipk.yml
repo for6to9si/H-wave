@@ -29,9 +29,9 @@ jobs:
           if [ "${{ github.event.inputs.copy }}" = "true" ]; then
             versions=$(curl -s "https://api.github.com/repos/apernet/hysteria/releases?per_page=100" \
               | jq -r '.[] | select(.prerelease == false) | .tag_name' \
-              | grep '^v[0-9]\+' \
-              | sed 's/^v//' \
-              | awk -F. '($2 == 2 && $2 >= 6 && $3 >= 1)' \
+              | grep '^app/v[0-9]\+' \
+              | sed 's#^app/v##' \
+              | awk -F. '($2 == 2 && $2 >= 6 && $3 >= 4)' \
               | sort -V)
 
             versions_json=$(echo "$versions" | jq -R . | jq -s -c .)
