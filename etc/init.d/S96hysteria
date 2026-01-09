@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# @file: S96hystria2
+# @file: S96hystria
 # @brief: Starting/Stopping Hystria
 #
 # @section License
@@ -23,7 +23,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # @author: for6to9si@gmail.com
-# @version: 0.0.1
+# @version: 0.0.2
 
 
 ENABLED=yes
