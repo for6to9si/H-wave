@@ -87,19 +87,19 @@ jobs:
             exit 0
           fi
 
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/sbin
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/ndm/netfilter.d
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/hysteria
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/hwave
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/var/log/hwave
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/var/log/hysteria
-          mkdir -p hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/sbin
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/ndm/netfilter.d
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/hysteria
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/hwave
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/var/log/hwave
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/var/log/hysteria
+          mkdir -p hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL
           
           cp hysteria-${{ matrix.arch }}-${{ matrix.version }} hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/sbin/hysteria
           
-          cp ./etc/init.d/S96hysteria hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
-          chmod +x hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
+          cp ./etc/init.d/S96hysteria hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
+          chmod +x hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/init.d/S96hysteria
           
           # Маппинг arch → Architecture
           case "${{ matrix.arch }}" in
@@ -108,7 +108,7 @@ jobs:
             *) arch_pkg="${{ matrix.arch }}" ;; # fallback
           esac
           
-          cat > hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL/control <<EOF
+          cat > hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL/control <<EOF
           Package: hysteria-tg-installer
           Depends: libc,libssp,librt,libpthread,libpthread,jq,iptables,ca-certificates
           Version: ${{ matrix.version }}
@@ -120,23 +120,23 @@ jobs:
           Maintainer: for6to9si <for6to9si@gmail.com>
           EOF
           
-          cp ./etc/ndm/netfilter.d/002-hwave.sh hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/ndm/netfilter.d/
-          chmod +x hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/ndm/netfilter.d/002-hwave.sh
-          cp ./etc/hwave/hwave-conf.json hysteria-{{ matrix.version }}-${{ matrix.arch }}/opt/etc/hwave/hwave-conf.json
+          cp ./etc/ndm/netfilter.d/002-hwave.sh hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/ndm/netfilter.d/
+          chmod +x hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/ndm/netfilter.d/002-hwave.sh
+          cp ./etc/hwave/hwave-conf.json hysteria-${{ matrix.version }}-${{ matrix.arch }}/opt/etc/hwave/hwave-conf.json
           
           ls -al ./
           ls -R ./
 
       - name: Add conffiles
         run: |
-          cat > hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL/conffiles <<'EOF'
+          cat > hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL/conffiles <<'EOF'
           /opt/etc/hwave/hwave-conf.json
           EOF
 
       - name: Add postinst script, add policy Hwave
         if: steps.download.outputs.found == 'true'
         run: |
-          cat > hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL/postinst <<'EOF'
+          cat > hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL/postinst <<'EOF'
           #!/bin/sh
           case "$1" in
            configure)
@@ -148,12 +148,12 @@ jobs:
           esac
           exit 0
           EOF
-          chmod 755 hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL/postinst
+          chmod 755 hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL/postinst
 
       - name: Add postrm script
         if: steps.download.outputs.found == 'true'
         run: |
-          cat > hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL/postrm <<'EOF'
+          cat > hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL/postrm <<'EOF'
           #!/bin/sh
           case "$1" in
            remove)
@@ -163,12 +163,12 @@ jobs:
           esac
           exit 0
           EOF
-          chmod 755 hysteria-{{ matrix.version }}-${{ matrix.arch }}/CONTROL/postrm
+          chmod 755 hysteria-${{ matrix.version }}-${{ matrix.arch }}/CONTROL/postrm
 
       - name: Package IPK
         if: steps.download.outputs.found == 'true'
         run: |
-          cd hysteria-{{ matrix.version }}-${{ matrix.arch }}
+          cd hysteria-${{ matrix.version }}-${{ matrix.arch }}
           fakeroot tar -czf ../data.tar.gz ./opt/sbin ./opt/etc ./opt/var/log/hwave ./opt/var/log/hysteria
           cd ./CONTROL
           fakeroot tar -czf ../../control.tar.gz *
@@ -181,7 +181,7 @@ jobs:
         if: steps.download.outputs.found == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: hysteria-{{ matrix.version }}-${{ matrix.arch }}
+          name: hysteria-${{ matrix.version }}-${{ matrix.arch }}
           path: ./*.ipk
           if-no-files-found: error
 
