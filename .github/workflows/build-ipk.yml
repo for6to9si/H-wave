@@ -69,7 +69,7 @@ jobs:
           echo "Trying to download $url"
 
           if curl --head --silent --fail "$url" > /dev/null; then
-            wget -q "$url" -o hysteria-${{ matrix.arch }}-${{ matrix.version }}
+            wget -q "$url" --output-document=hysteria-${{ matrix.arch }}-${{ matrix.version }}
             echo "found=true" >> $GITHUB_OUTPUT
           else
             echo "No release found for version=${{ matrix.version }}, arch=${{ matrix.arch }}"
