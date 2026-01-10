@@ -1,0 +1,82 @@
+listen: :443  # UDP для Hysteria (QUIC)
+
+acme:
+  domains:
+    - YOUR.DOMAIN.NAME
+  email: your@gmail.com
+  dataDir: /var/lib/hysteria/acme
+
+#obfs:
+#  type: salamander
+#  salamander:
+#    password: xaVdfafdsfasfdfasfWFV6S
+
+auth:
+  type: password
+  password: M8MdfafasfasfasfdsffhNbKdaJ
+
+masquerade:
+  type: proxy
+  disableHTTP3Fallback: true
+  proxy:
+    url: https://news.ycombinator.com/
+    rewriteHost: true
+  listenHTTP: :80     # Опционально: TCP 80 для HTTP
+  listenHTTPS: :443   # ВАЖНО: TCP 443 для HTTPS masquerade
+  forceHTTPS: true    # Перенаправлять HTTP на HTTPS
+
+bandwidth:
+  up: 100 mbps
+  down: 100 mbps
+
+ignoreClientBandwidth: false
+
+acl:
+  geoSite: /etc/hysteria/dat/geosite.dat  # путь к скачанному файлу
+  geoIP: /etc/hysteria/dat/geoip.dat
+  geoIPruOnly: /etc/hysteria/dat/geoip-ru-only.dat
+
+  inline:
+    # Сначала твои новые IP
+    - ai_proxy(104.236.69.55)
+    - ai_proxy(188.40.167.82)
+
+    # Или целый диапазон (CIDR) одним правилом
+    - ai_proxy(104.236.68.0/24)   # пример: весь подсеть 104.236.69.0 - 104.236.69.255
+
+    # Сначала российские IP через твой прокси
+    - ai_proxy(geoip:ru)
+    - ai_proxy(geoIPruOnly)
+
+    - ai_proxy(geosite:openai)
+    - ai_proxy(geosite:anthropic)
+    - ai_proxy(geosite:google-gemini)
+    - ai_proxy(geosite:google-deepmind)
+    - ai_proxy(geosite:category-ru)
+    - ai_proxy(geosite:category-ai-cn)
+
+    - ai_proxy(suffix:4pda.to)
+    - ai_proxy(suffix:browserleaks.com)
+    - ai_proxy(suffix:ntc.party)
+
+
+    - direct(all)   # весь остальной трафик напрямую
+
+outbounds:
+  - name: direct      # первый — default для остального трафика
+    type: direct
+
+  - name: ai_proxy    # имя для твоего outbound
+    type: socks5
+    socks5:
+      addr: 12.13.14.15:9081
+      username: C-3PO
+      password: Skywalker
+
+sniff:
+  enabled: true          # обязательно включить
+  overrideDestination: true   # опционально, но рекомендуется
+  log: true              # КЛЮЧЕВОЕ: включает логирование матчинга и outbound
+
+log:
+  level: debug

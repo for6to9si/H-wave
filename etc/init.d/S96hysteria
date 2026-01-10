@@ -23,7 +23,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # @author: for6to9si@gmail.com
-# @version: 0.0.4
+# @version: 0.0.5
 
 
 ENABLED=yes
@@ -153,6 +153,7 @@ start_hysteria() {
     fi
 
     export SSL_CERT_DIR=/opt/etc/ssl/certs
+    [ "${DEBUG:-false}" = "true" ] && export HYSTERIA_LOG_LEVEL="debug" HYSTERIA_BBR_DEBUG=1
 
     # Записываем информацию в лог и запускаем hysteria
     {
