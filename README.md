@@ -89,10 +89,19 @@ opkg remove hysteria-tg-installer
 
 ## Логи и отладка
 
-- Просмотр логов и другая полезная отладочная информация:
+### Просмотр логов Hysteria
+
+  Просмотр логов Hysteria и другая полезная отладочная информация:
   ```bash
   cat /opt/var/log/hwave/hwave.log
   ```
+
+### Режим отладки
+
+  По умолчанию включён полный режим отладки.  
+  Для отключения отладочного вывода установите переменную `DEBUG=false`  
+  в файле [`/opt/etc/init.d/S96hysteria`](https://github.com/for6to9si/H-wave/blob/main/etc/init.d/S96hysteria#L30).
+
 
 ## Важное замечание о Obfuscation
 
