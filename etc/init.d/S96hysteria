@@ -27,7 +27,7 @@
 
 
 ENABLED=yes
-DEBUG=true
+DEBUG=false
 export PATH=/opt/bin:/opt/sbin:/usr/bin:/bin:/sbin:/usr/sbin
 
 # Включение трассировки (если нужно)
