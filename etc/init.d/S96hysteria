@@ -27,7 +27,7 @@
 
 
 ENABLED=yes
-DEBUG=false
+DEBUG=true
 export PATH=/opt/bin:/opt/sbin:/usr/bin:/bin:/sbin:/usr/sbin
 
 # Включение трассировки (если нужно)
@@ -111,6 +111,72 @@ PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:
 ACTION=$1
 CALLER=$2
 
+CONFIG_HY2_FILE="$(echo "$js_SETTING" | jq -r '.client.path_config // "/opt/etc/hysteria/config.json"')"
+
+# Проверка существования файла
+if [ ! -f "$CONFIG_HY2_FILE" ]; then
+    echo "Ошибка: Файл конфигурации не найден"
+    exit 1
+fi
+
+# Парсинг JSON
+js_CONFIG_HY2_FILE=$(get_clean_json "$CONFIG_HY2_FILE" | jq -c '.' 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$js_CONFIG_HY2_FILE" ]; then
+  echo "Ошибка: файл '$CONFIG_HY2_FILE' содержит некорректный JSON." >&2
+  exit 1
+fi
+
+# Получение значения tun.name
+TUN_NAME=$(echo "$js_CONFIG_HY2_FILE" | jq -r '.tun.name // empty' 2>/dev/null)
+
+# Проверка наличия поля
+if [ -z "$TUN_NAME" ]; then
+    echo "Поле tun.name не найдено, Hwave работает в режиме REDIRECT и TPROXY"
+    [ -f "/opt/etc/ndm/netfilter.d/002-hwave.sh" ] && \
+        chmod +x "/opt/etc/ndm/netfilter.d/002-hwave.sh"
+    [ -f "/opt/etc/ndm/wan.d/hysteria-restart.sh" ] && \
+        chmod 000 "/opt/etc/ndm/wan.d/hysteria-restart.sh"
+fi
+
+# Проверка на маленькие буквы
+TUN_LOWER=$(echo "$TUN_NAME" | tr '[:upper:]' '[:lower:]')
+
+if [ "$TUN_NAME" != "$TUN_LOWER" ]; then
+  echo "Ошибка: tun.name содержит заглавные буквы: $TUN_NAME"
+  echo "Должно быть: $TUN_LOWER"
+  exit 1
+else
+
+  # Преобразование opkgtun6 -> OpkgTun6
+  TUN_NAME_UPPER=$(echo "$TUN_NAME" | sed 's/^opkgtun/OpkgTun/')
+
+  # Проверка диапазона (только OpkgTun0-OpkgTun6)
+  TUN_NUMBER=$(echo "$TUN_NAME_UPPER" | sed 's/OpkgTun//')
+  if ! echo "$TUN_NUMBER" | grep -qE '^[0-6]$'; then
+      echo "Ошибка: Недопустимое имя интерфейса: $TUN_NAME_UPPER"
+      echo "Разрешены только OpkgTun0-OpkgTun6"
+      exit 1
+  fi
+
+  # Проверка существования интерфейса в ndm
+  if ! ndmc -c "show interface $TUN_NAME_UPPER" >/dev/null 2>&1; then
+    ndmc -c "interface $TUN_NAME_UPPER"
+    ndmc -c "interface $TUN_NAME_UPPER description HwaveTun"
+    ndmc -c "interface $TUN_NAME_UPPER ip address 172.21.0.2 255.255.255.255"
+    ndmc -c "interface $TUN_NAME_UPPER ip global order 10"
+    ndmc -c "interface $TUN_NAME_UPPER ip mtu 1280"
+    ndmc -c "interface $TUN_NAME_UPPER ip tcp adjust-mss pmtu"
+    ndmc -c "interface $TUN_NAME_UPPER security-level public"
+    ndmc -c "interface $TUN_NAME_UPPER up"
+    ndmc -c "ip route default $TUN_NAME_UPPER"
+    ndmc -c 'system configuration save'
+    [ -f "/opt/etc/ndm/netfilter.d/002-hwave.sh" ] && \
+        chmod 000 "/opt/etc/ndm/netfilter.d/002-hwave.sh"
+    [ -f "/opt/etc/ndm/wan.d/hysteria-restart.sh" ] && \
+        chmod +xwr "/opt/etc/ndm/wan.d/hysteria-restart.sh"
+  fi
+
+fi
 
 # Проверка, запущен ли процесс для данной конфигурации
 is_running() {
@@ -868,10 +934,13 @@ case $ACTION in
       if [ "$CALLER" = "cron" -a "$ENABLED" != yes ]; then
 		    return 8
 	    fi
-      kernel_modules_load
-      check_iptables_tproxy || exit 1
-      check_iptables_multiport || exit 1
-      wait_for_iptables_tables 20 || exit 1
+
+      if [ -x "/opt/etc/ndm/netfilter.d/002-hwave.sh" ] 2>/dev/null; then
+        kernel_modules_load
+        check_iptables_tproxy || exit 1
+        check_iptables_multiport || exit 1
+        wait_for_iptables_tables 20 || exit 1
+      fi
 
       if is_running; then
 		    echo -e "$PROCS ${color_green} is already running ${color_reset}" >&2
@@ -889,8 +958,10 @@ case $ACTION in
       start_hysteria
 
       if [ -t 0 ]; then
-        firewall_iptables
-        [ "$IPv6" = "true" ] && firewall_ip6tables
+        if [ -x "/opt/etc/ndm/netfilter.d/002-hwave.sh" ] 2>/dev/null; then
+          firewall_iptables
+          [ "$IPv6" = "true" ] && firewall_ip6tables
+        fi
         # Небольшая задержка для проверки, что процесс запустился
         sleep 4
         if is_running; then
@@ -913,6 +984,8 @@ case $ACTION in
       del_iptables "${chain_name}"
       del_iptables "${chain_name_output}"
       stop_hysteria
+#      ndmc -c "no interface $TUN_NAME_UPPER"
+#      ndmc -c 'system configuration save'
       "$0" status
       ;;
   status)
@@ -968,6 +1041,15 @@ case $ACTION in
       chain_name_output="${chain_name}"_out
       del_iptables "${chain_name}"
       del_iptables "${chain_name_output}"
+      ;;
+  opkgtun_delete)
+      "$0" firewall_down
+      [ -f "/opt/etc/ndm/netfilter.d/002-hwave.sh" ] && \
+          chmod +xwr "/opt/etc/ndm/netfilter.d/002-hwave.sh"
+      [ -f "/opt/etc/ndm/wan.d/hysteria-restart.sh" ] && \
+          chmod 000 "/opt/etc/ndm/wan.d/hysteria-restart.sh"
+      ndmc -c "no interface $TUN_NAME_UPPER"
+      ndmc -c 'system configuration save'
       ;;
   *)
       echo -e "  Команды: ${color_green}start${color_reset} | ${color_red}stop${color_reset} | ${color_yellow}restart${color_reset} | ${color_blue}backup${color_reset} | status"
