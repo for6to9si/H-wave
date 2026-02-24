@@ -23,7 +23,7 @@
     },
     "udpTProxy":
     {
-        "listen": ":60019",
+        "listen": ":60020",
         "timeout": "20s"
     }
 }

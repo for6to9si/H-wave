@@ -17,7 +17,7 @@
     "connection_policy": "hwave",
     "chain_name": "hwave",
     "port_redirect": "60018",
-    "port_tproxy": "60019",
+    "port_tproxy": "60020",
     "port_forwarding_list":
     [
       80,
