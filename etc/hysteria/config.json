@@ -19,11 +19,11 @@
     "lazy": true,
     "tcpRedirect":
     {
-        "listen": 60018
+        "listen": ":60018"
     },
     "udpTProxy":
     {
-        "listen": 60019,
+        "listen": ":60019",
         "timeout": "20s"
     }
 }
