@@ -23,7 +23,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # @author: for6to9si@gmail.com
-# @version: 0.0.5
+# @version: 0.0.6
 
 
 ENABLED=yes
@@ -233,7 +233,7 @@ get_policy_mark() {
   _color_reset=$'\033[0m'
 
   policy_mark=$(
-      curl -kfsS "localhost:79/rci/show/ip/policy" \
+      curl -kfsS "127.0.0.1:79/rci/show/ip/policy" \
       | jq -r --arg policy "$(echo "$js_SETTING" | jq -r '.network.connection_policy')" '
           .[]
           | select(.description
