@@ -27,16 +27,16 @@ jobs:
         id: set-versions
         run: |
           if [ "${{ github.event.inputs.copy }}" = "true" ]; then
-            versions=$(curl -s "https://api.github.com/repos/apernet/hysteria/releases?per_page=100" \
+            versions=$(curl -s "https://api.github.com/repos/HyNetworks/hysteria/releases?per_page=100" \
               | jq -r '.[] | select(.prerelease == false) | .tag_name' \
               | grep '^app/v[0-9]\+' \
               | sed 's#^app/v##' \
-              | awk -F. '($1 == 2 && $2 >= 8 && $3 >= 0)' \
+              | awk -F. '($1 == 2 && $2 >= 10)' \
               | sort -V)
 
             versions_json=$(echo "$versions" | jq -R . | jq -s -c .)
           else
-            latest=$(curl -s "https://api.github.com/repos/apernet/hysteria/releases/latest" \
+            latest=$(curl -s "https://api.github.com/repos/HyNetworks/hysteria/releases/latest" \
               | jq -r 'select(.prerelease == false) | .tag_name' \
               | sed 's#^app/v##' )
             versions_json=$(echo "[\"$latest\"]")
