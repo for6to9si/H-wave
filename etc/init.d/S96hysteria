@@ -23,7 +23,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # @author: for6to9si@gmail.com
-# @version: 0.0.6
+# @version: 0.0.7
 
 
 ENABLED=yes
@@ -433,15 +433,30 @@ fi
 
 kernel_modules_load() {
     KERNEL=$(uname -r)
+    BUILTIN_FILE="/lib/modules/$KERNEL/modules.builtin"
 
     for mod in xt_TPROXY xt_socket xt_multiport; do
         debug "[INFO] Checking for module: $mod"
 
-        if lsmod | grep -q "^$mod"; then
-            debug "[OK] $mod already loaded"
+        # 1. Проверяем, загружен ли модуль или вшит ли он в ядро через /sys/module
+        if [ -d "/sys/module/$mod" ]; then
+            debug "[OK] $mod is active (loaded or built-in)"
             continue
         fi
 
+        # 2. Дополнительная проверка по списку modules.builtin
+        if [ -f "$BUILTIN_FILE" ] && grep -q "/${mod}\.ko" "$BUILTIN_FILE"; then
+            logger -t "$(basename "$0")" "[OK] $mod is built into kernel"
+            continue
+        fi
+
+        # 3. Если модуль не встроен, пробуем стандартный modprobe
+        if modprobe "$mod" 2>/dev/null; then
+            logger -t "$(basename "$0")" "[OK] $mod loaded via modprobe"
+            continue
+        fi
+
+        # 4. Фолбэк: ручной поиск .ko файла (на случай нестандартных путей)
         mod_file=$(find /lib/modules/"$KERNEL" -name "$mod.ko*" 2>/dev/null | head -n1)
 
         if [ -n "$mod_file" ]; then
@@ -452,19 +467,9 @@ kernel_modules_load() {
             else
                 logger -t "$(basename "$0")" "[WARN] insmod failed for $mod"
             fi
-        else
-            logger -t "$(basename "$0")" "[WARN] No .ko file found for $mod"
         fi
 
-        if modprobe "$mod" --first-time 2>/dev/null; then
-            logger -t "$(basename "$0")" "[OK] $mod loaded via modprobe"
-        else
-            if lsmod | grep -q "^$mod"; then
-                logger -t "$(basename "$0")" "[OK] $mod is already loaded (modprobe failed because of that)"
-            else
-                logger -t "$(basename "$0")" "[FAIL] Failed to load $mod"
-            fi
-        fi
+        logger -t "$(basename "$0")" "[FAIL] Failed to load or locate $mod"
     done
 }
 

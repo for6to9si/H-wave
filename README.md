@@ -45,11 +45,11 @@ Hysteria 2 устанавливается напрямую из релизов G
 
 Для архитектуры mipsle:
 ```bash
-opkg install https://github.com/for6to9si/H-wave/releases/download/v2.6.5/hysteria_2.6.5_mipsle.ipk
+opkg install https://github.com/for6to9si/H-wave/releases/download/v2.12.2/hysteria_2.12.2_mipsle.ipk
 ```
 Для архитектуры arm64:
 ```bash
-opkg install https://github.com/for6to9si/H-wave/releases/download/v2.6.5/hysteria_2.6.5_arm64.ipk
+opkg install https://github.com/for6to9si/H-wave/releases/download/v2.12.2/hysteria_2.12.2_arm64.ipk
 ```
 
 ℹ️ Если архитектура роутера неизвестна, можно попробовать установить оба пакета — Entware не позволит установить неподходящий.
